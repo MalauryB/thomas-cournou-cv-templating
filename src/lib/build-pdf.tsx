@@ -1,6 +1,7 @@
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import type { FullCvData } from "./schema";
 import { estimateContentScale } from "./estimate-content-scale";
+import { LOGO_BUFFER, LOGO_ASPECT_RATIO } from "./logo";
 
 const ISSUER_NAME = "Thomas Cournou";
 const AGENCY_NAME = "AKXIO CONSEILS";
@@ -12,20 +13,10 @@ function buildStyles(scale: number) {
   const f = (n: number) => Math.round(n * scale * 10) / 10;
   return StyleSheet.create({
     page: { padding: f(42), fontSize: f(10.5), fontFamily: "Helvetica", color: "#222222" },
-    logoMain: {
-      fontSize: f(26),
-      fontWeight: 700,
-      color: BRAND_BLUE,
-      textAlign: "center",
-      letterSpacing: f(6),
-    },
-    logoSub: {
-      fontSize: f(11),
-      fontWeight: 700,
-      color: BRAND_BLUE,
-      textAlign: "center",
-      letterSpacing: f(8),
-      marginTop: f(2),
+    logo: {
+      width: f(170),
+      height: f(170) / LOGO_ASPECT_RATIO,
+      alignSelf: "center",
       marginBottom: f(18),
     },
     centered: { textAlign: "center", fontSize: f(10) },
@@ -51,8 +42,7 @@ export async function buildPdf(data: FullCvData): Promise<Buffer> {
   const doc = (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.logoMain}>AKXIO</Text>
-        <Text style={styles.logoSub}>CONSEILS</Text>
+        <Image src={LOGO_BUFFER} style={styles.logo} />
 
         <Text style={styles.centered}>Disponibilité : {data.availability || "—"}</Text>
         <Text style={styles.centered}>Rémunération cible : {data.compensation || "—"}</Text>

@@ -3,10 +3,12 @@ import {
   Packer,
   Paragraph,
   TextRun,
+  ImageRun,
   AlignmentType,
 } from "docx";
 import type { FullCvData } from "./schema";
 import { estimateContentScale } from "./estimate-content-scale";
+import { LOGO_BUFFER, LOGO_ASPECT_RATIO } from "./logo";
 
 const ISSUER_NAME = "Thomas Cournou";
 const AGENCY_NAME = "AKXIO CONSEILS";
@@ -37,28 +39,19 @@ export async function buildDocx(data: FullCvData): Promise<Buffer> {
 
   const children: Paragraph[] = [];
 
+  const logoWidth = Math.round(240 * scale);
   children.push(
-    centered([
-      new TextRun({
-        text: "AKXIO",
-        bold: true,
-        size: sz(44),
-        color: BRAND_BLUE,
-        characterSpacing: sz(120),
-      }),
-    ]),
-    centered(
-      [
-        new TextRun({
-          text: "CONSEILS",
-          bold: true,
-          size: sz(20),
-          color: BRAND_BLUE,
-          characterSpacing: sz(180),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: sp(260) },
+      children: [
+        new ImageRun({
+          type: "png",
+          data: LOGO_BUFFER,
+          transformation: { width: logoWidth, height: Math.round(logoWidth / LOGO_ASPECT_RATIO) },
         }),
       ],
-      260,
-    ),
+    }),
 
     centered([new TextRun({ text: `Disponibilité : ${data.availability || "—"}`, size: sz(20) })]),
     centered([
