@@ -24,32 +24,45 @@ export const cvSchema = z.object({
       z.object({
         headline: z
           .string()
+          .max(140)
           .describe(
             "Ligne d'en-tête en gras de l'expérience, ex: " +
               "\"2024-2026  Collaborateur Comptable Confirmé – Cabinet d'expertise comptable (CDI)\". " +
               "Inclut la période, le poste, l'entreprise (ou son type si le nom n'est pas public) et le type de contrat si connu.",
           ),
         descriptionLines: z
-          .array(z.string())
+          .array(z.string().max(160))
+          .max(4)
           .describe(
-            "Lignes de description des missions/réalisations, en texte simple (pas de puces), " +
-              "formulées en phrases courtes et concrètes.",
+            "Au maximum 4 lignes de description des missions/réalisations les plus significatives, " +
+              "en texte simple (pas de puces), formulées en phrases courtes et concrètes. " +
+              "Regrouper les points secondaires ensemble plutôt que multiplier les lignes.",
           ),
       }),
     )
-    .describe("Expériences professionnelles, de la plus récente à la plus ancienne"),
+    .max(5)
+    .describe(
+      "Au maximum 5 expériences professionnelles, de la plus récente à la plus ancienne. " +
+        "S'il y en a davantage dans le CV source, ne garder que les plus récentes/pertinentes " +
+        "par rapport à l'accroche du poste, et condenser ou fusionner les plus anciennes.",
+    ),
   education: z
     .array(
       z.object({
         headline: z
           .string()
+          .max(120)
           .describe("Ligne de formation en gras, ex: \"2025  MASTER CCA (Candidat Libre)\""),
       }),
     )
-    .describe("Formations"),
+    .max(3)
+    .describe("Au maximum 3 formations les plus significatives (diplômes les plus élevés/récents)"),
   tools: z
     .array(z.string())
-    .describe("Logiciels et outils maîtrisés, tels que mentionnés ou déductibles du CV source"),
+    .max(12)
+    .describe(
+      "Au maximum 12 logiciels/outils clés maîtrisés, tels que mentionnés ou déductibles du CV source",
+    ),
 });
 
 export type CvData = z.infer<typeof cvSchema>;

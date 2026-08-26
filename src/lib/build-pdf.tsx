@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import type { FullCvData } from "./schema";
+import { estimateContentScale } from "./estimate-content-scale";
 
 const ISSUER_NAME = "Thomas Cournou";
 const AGENCY_NAME = "AKXIO CONSEILS";
@@ -7,35 +8,46 @@ const ISSUER_PHONE = "06 06 42 89 26";
 const ISSUER_EMAIL = "t.cournou@akxioconseils.fr";
 const BRAND_BLUE = "#2E6DA4";
 
-const styles = StyleSheet.create({
-  page: { padding: 42, fontSize: 10.5, fontFamily: "Helvetica", color: "#222222" },
-  logoMain: {
-    fontSize: 26,
-    fontWeight: 700,
-    color: BRAND_BLUE,
-    textAlign: "center",
-    letterSpacing: 6,
-  },
-  logoSub: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: BRAND_BLUE,
-    textAlign: "center",
-    letterSpacing: 8,
-    marginTop: 2,
-    marginBottom: 18,
-  },
-  centered: { textAlign: "center", fontSize: 10 },
-  reference: { fontSize: 10, marginTop: 16, marginBottom: 10 },
-  jobTitle: { fontSize: 12, fontWeight: 700, marginBottom: 4 },
-  sectionTitle: { fontSize: 11, fontWeight: 700, color: BRAND_BLUE, marginTop: 16, marginBottom: 6 },
-  expHeadline: { fontSize: 10, fontWeight: 700, marginTop: 8 },
-  line: { fontSize: 10, lineHeight: 1.35 },
-  toolsLabel: { fontSize: 10, fontWeight: 700, marginTop: 16 },
-  footer: { fontSize: 8.5, color: "#555555", textAlign: "center", marginTop: 28 },
-});
+function buildStyles(scale: number) {
+  const f = (n: number) => Math.round(n * scale * 10) / 10;
+  return StyleSheet.create({
+    page: { padding: f(42), fontSize: f(10.5), fontFamily: "Helvetica", color: "#222222" },
+    logoMain: {
+      fontSize: f(26),
+      fontWeight: 700,
+      color: BRAND_BLUE,
+      textAlign: "center",
+      letterSpacing: f(6),
+    },
+    logoSub: {
+      fontSize: f(11),
+      fontWeight: 700,
+      color: BRAND_BLUE,
+      textAlign: "center",
+      letterSpacing: f(8),
+      marginTop: f(2),
+      marginBottom: f(18),
+    },
+    centered: { textAlign: "center", fontSize: f(10) },
+    reference: { fontSize: f(10), marginTop: f(16), marginBottom: f(10) },
+    jobTitle: { fontSize: f(12), fontWeight: 700, marginBottom: f(4) },
+    sectionTitle: {
+      fontSize: f(11),
+      fontWeight: 700,
+      color: BRAND_BLUE,
+      marginTop: f(16),
+      marginBottom: f(6),
+    },
+    expHeadline: { fontSize: f(10), fontWeight: 700, marginTop: f(8) },
+    line: { fontSize: f(10), lineHeight: 1.3 },
+    toolsLabel: { fontSize: f(10), fontWeight: 700, marginTop: f(16) },
+    footer: { fontSize: f(8.5), color: "#555555", textAlign: "center", marginTop: f(28) },
+  });
+}
 
 export async function buildPdf(data: FullCvData): Promise<Buffer> {
+  const styles = buildStyles(estimateContentScale(data));
+
   const doc = (
     <Document>
       <Page size="A4" style={styles.page}>
