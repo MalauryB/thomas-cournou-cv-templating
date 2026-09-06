@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateObject } from "ai";
+import { generateObject, NoObjectGeneratedError } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { jsonrepair } from "jsonrepair";
 import { cvSchema, type FullCvData } from "@/lib/schema";
+import { clampCvData } from "@/lib/clamp-cv-data";
 import { extractCvText } from "@/lib/extract-cv-text";
 import { buildDocx } from "@/lib/build-docx";
 import { buildPdf } from "@/lib/build-pdf";
@@ -48,9 +50,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { object: cvData } = await generateObject({
+    const cvData = clampCvData(await generateCvData(sourceText));
+
+    const fullData: FullCvData = { ...cvData, reference, availability, compensation };
+
+    const [docxBuffer, pdfBuffer] = await Promise.all([
+      buildDocx(fullData),
+      buildPdf(fullData),
+    ]);
+
+    const baseName = slugify(fullData.fullName || "cv") || "cv";
+
+    return NextResponse.json({
+      fileBaseName: baseName,
+      docxBase64: docxBuffer.toString("base64"),
+      pdfBase64: pdfBuffer.toString("base64"),
+    });
+  } catch (err) {
+    console.error(err);
+    const message = err instanceof Error ? err.message : "Erreur inconnue";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function generateCvData(sourceText: string) {
+  try {
+    const { object } = await generateObject({
       model: openrouter("anthropic/claude-sonnet-5"),
       schema: cvSchema,
+      maxOutputTokens: 8000,
+      maxRetries: 3,
+      // The model occasionally truncates or slightly malforms its JSON output
+      // (especially on longer/denser source CVs). Auto-repair before giving up.
+      repairText: async ({ text }) => {
+        try {
+          return jsonrepair(text);
+        } catch {
+          return null;
+        }
+      },
       prompt: [
         "Tu es un expert en rédaction de fiches candidat pour un cabinet de placement/recrutement.",
         "À partir du contenu brut de CV ci-dessous, restructure et professionnalise les informations",
@@ -74,23 +112,18 @@ export async function POST(req: NextRequest) {
       ].join("\n"),
     });
 
-    const fullData: FullCvData = { ...cvData, reference, availability, compensation };
-
-    const [docxBuffer, pdfBuffer] = await Promise.all([
-      buildDocx(fullData),
-      buildPdf(fullData),
-    ]);
-
-    const baseName = slugify(fullData.fullName || "cv") || "cv";
-
-    return NextResponse.json({
-      fileBaseName: baseName,
-      docxBase64: docxBuffer.toString("base64"),
-      pdfBase64: pdfBuffer.toString("base64"),
-    });
+    return object;
   } catch (err) {
-    console.error(err);
-    const message = err instanceof Error ? err.message : "Erreur inconnue";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (NoObjectGeneratedError.isInstance(err)) {
+      console.error("NoObjectGeneratedError:", err.finishReason, err.text);
+      const reason =
+        err.finishReason === "length"
+          ? "la réponse du modèle a été coupée (contenu source trop long/dense)"
+          : "le modèle a renvoyé une réponse mal formée";
+      throw new Error(
+        `Échec de la restructuration du CV : ${reason}. Réessaie, ou raccourcis/simplifie le CV source.`,
+      );
+    }
+    throw err;
   }
 }

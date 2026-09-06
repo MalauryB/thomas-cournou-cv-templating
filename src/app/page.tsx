@@ -44,9 +44,15 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/generate", { method: "POST", body: fd });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: { error?: string; fileBaseName?: string; docxBase64?: string; pdfBase64?: string };
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error("Le serveur n'a pas répondu correctement. Réessaie dans un instant.");
+      }
       if (!res.ok) throw new Error(data.error || "Échec de la génération.");
-      setResult(data);
+      setResult(data as Result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
